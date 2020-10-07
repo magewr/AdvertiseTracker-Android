@@ -5,12 +5,10 @@ import android.graphics.Rect;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.widget.NestedScrollView;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager.widget.ViewPager;
+import com.magewr.advertisetracker.advertisetracker.enums.ADType;
+import com.magewr.advertisetracker.advertisetracker.enums.State;
+import com.magewr.advertisetracker.advertisetracker.interfaces.AdvertiseTrackerDataSource;
+import com.magewr.advertisetracker.advertisetracker.interfaces.EventNameDataSource;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -19,57 +17,17 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import io.reactivex.Observable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.PublishSubject;
+import androidx.annotation.NonNull;
+import androidx.core.widget.NestedScrollView;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager.widget.ViewPager;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subjects.PublishSubject;
 
 public class AdvertiseTracker {
-
-    // 스크롤 상태에 따라 Observable에 발행하기 위한 enum
-    private enum State {
-        Scroll,
-        Idle,
-    }
-
-    // 광고 타입
-    public enum ADType {
-        HomeBigBanner("홈_메인배너"),
-        HomeSmallBanner("홈_띠배너");
-
-        private String typeName;
-
-        ADType(String typeName) {
-            this.typeName = typeName;
-        }
-
-        /**
-         * PV, UV 등 FA View Event 전송용 스트링
-         * @param eventName 이벤트명
-         * @param isUnique 유니크 여부
-         * @return 스트링
-         */
-        public String getViewEventFullString(String eventName, boolean isUnique) {
-            String eventString;
-            eventString = String.format("%s_%s_%s", this.typeName, isUnique ? "SV" : "PV", eventName);
-
-            return eventString.replace(" ", "_");
-        }
-
-        /**
-         * PC, UC 등 FA Click Event 전송용 스트링
-         * @param eventName 이벤트명
-         * @param isUnique 유니크여부
-         * @return 스트링
-         */
-        public String getClickEventFullString(String eventName, boolean isUnique) {
-            String eventString;
-            eventString = String.format("%s_%s_%s", this.typeName, isUnique ? "SC" : "C", eventName);
-
-            return eventString.replace(" ", "_");
-        }
-    }
-
     // session Event 저장용 Set, 세션만료까지 유지이므로 static
     private static Set<String> sessionEventSet = new HashSet<>();
     // Page Event 저장용 Set, 필요시 초기화 가능
@@ -87,7 +45,10 @@ public class AdvertiseTracker {
         this.advertiseTrackerDataSource = advertiseTrackerDataSource;
     }
 
-
+    // 스크롤 리스너 래핑용 인터페이스
+    private interface ScrollListener {
+        void onScroll();
+    }
     // 부모 스크롤뷰에 여러개의 리스너가 달려야 하므로 스크롤 리스너를 래핑
     private List<ScrollListener> scrollListenerList = new ArrayList<>();
     private NestedScrollView.OnScrollChangeListener parentScrollViewScrollListener = (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
@@ -145,7 +106,7 @@ public class AdvertiseTracker {
                             } else {
                                 // 뷰가 전부 보일 경우
                                 String eventName = eventNameDataSource.getEventName(type, viewHolder.getAdapterPosition(), viewHolder);
-                                sendFAViewEvent(type, eventName);
+                                sendViewEvent(type, eventName);
                             }
                         }, error -> {
                         }
@@ -205,7 +166,7 @@ public class AdvertiseTracker {
 
         return scrollSubject.throttleFirst(100, TimeUnit.MILLISECONDS)
                 .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.io())// 백그라운드 쓰레드에서 작업
+                .observeOn(Schedulers.io())     // 백그라운드 쓰레드에서 작업
                 .mergeWith(startTimer)          // resume된경우 최초 1회 발행
                 .flatMap(state -> getBannerViewHolder(adListView, adViewHolderClass))   // 배너가 있는 뷰홀더 가져옴
                 .flatMap(viewHolder -> getBannerViewPager((ViewGroup) viewHolder.itemView)) // 뷰홀더에서 배너 ViewPager 가져옴
@@ -235,7 +196,7 @@ public class AdvertiseTracker {
                             } else {
                                 // 뷰가 전부 보일 경우
                                 String eventName = eventNameDataSource.getEventName(type, viewPager.getCurrentItem(), null);
-                                String subCategory = null;
+                                sendViewEvent(type, eventName);
                             }
                         }, error -> {
                         }
@@ -243,7 +204,7 @@ public class AdvertiseTracker {
     }
 
     /**
-     * 스크롤 주체가 NestedScrollView 이고 자식 RecyclerView 안에 광고 뷰홀더가 존재하는 경우 (홈화면 하단 이벤트배너)
+     * 스크롤 주체가 NestedScrollView 이고 자식 RecyclerView 안에 광고 뷰홀더가 존재하는 경우
      *
      * @param type ADType
      * @param parentScrollView 부모 스크롤뷰
@@ -307,7 +268,7 @@ public class AdvertiseTracker {
                                 } else {
                                     // 뷰가 전부 보일 경우
                                     String eventName = eventNameDataSource.getEventName(type, adListView.getChildAdapterPosition(viewHolder.itemView), viewHolder);
-                                    sendFAViewEvent(type, eventName);
+                                    sendViewEvent(type, eventName);
                                 }
                             }
                         }, error -> {
@@ -317,7 +278,7 @@ public class AdvertiseTracker {
     }
 
     /**
-     * 스크롤 주체가 NestedScrollView 이고 자식 ViewPager 안에 광고가 있는 경우 (홈화면 롤링배너)
+     * 스크롤 주체가 NestedScrollView 이고 자식 ViewPager 안에 광고가 있는 경우
      *
      * @param type ADType : 광고 타입
      * @param parent 부모가 되는 스크롤뷰
@@ -410,7 +371,7 @@ public class AdvertiseTracker {
                     } else {
                         // 뷰가 전부 보일 경우
                         String eventName = eventNameDataSource.getEventName(type, position, null);
-                        sendFAViewEvent(type, eventName);
+                        sendViewEvent(type, eventName);
                     }
                 }, error -> {
 
@@ -425,7 +386,7 @@ public class AdvertiseTracker {
     }
 
     /**
-     * 세션만료 상황일 경우 세션 이벤트 클리어 (1시간 이후 재접속 시 세션만료)
+     * 세션만료 상황일 경우 세션 이벤트 클리어
      */
     public void clearSession() {
         sessionEventSet.clear();
@@ -539,7 +500,7 @@ public class AdvertiseTracker {
      * @param type ADType
      * @param eventName EventName
      */
-    public void sendFAViewEvent(ADType type, String eventName) {
+    public void sendViewEvent(ADType type, String eventName) {
         if (eventName == null || eventName.isEmpty())
             return;
 
@@ -555,7 +516,7 @@ public class AdvertiseTracker {
         }
     }
 
-    public void sendFAClickEvent(ADType type, String eventName) {
+    public void sendClickEvent(ADType type, String eventName) {
         if (eventName == null || eventName.isEmpty())
             return;
 
@@ -572,10 +533,7 @@ public class AdvertiseTracker {
     }
 
 
-    // 스크롤 리스너 래핑용 인터페이스
-    private interface ScrollListener {
-        void onScroll();
-    }
+
 
     /**
      * 자식 전체에서 특정 클래스의 View 를 찾아주는 파인더 클래스
@@ -608,30 +566,5 @@ public class AdvertiseTracker {
 
             return viewList;
         }
-    }
-
-
-    /**
-     * DataSource Interface
-     */
-
-    // 이벤트명 제공받는 인터페이스
-    public interface EventNameDataSource {
-        String getEventName(ADType type, int position, @Nullable RecyclerView.ViewHolder bannerViewHolder);
-    }
-
-    // 서브카테고리가 가변일 경우 제공받는 인터페이스 (ex, "청담클래스_탭이름_PV_이벤트명 에서 '탭이름' 영역)
-    public interface SubCategoryNameDataSource {
-        String getSubCategoryName(ADType type, int position, @Nullable RecyclerView.ViewHolder bannerViewHolder);
-    }
-
-    // 애널리틱스 트래커 제공받는 인터페이스
-    public interface AdvertiseTrackerDataSource {
-        AdvertiseTrackerDelegate getAdvertiseTracker();
-    }
-
-    // 애널리틱스 트래커 인터페이스 이 인터페이스를 구현한 애널리틱스 트래커는 모두 사용가능
-    public interface AdvertiseTrackerDelegate {
-        void sendAdvertiseEvent(String advertiseName);
     }
 }
