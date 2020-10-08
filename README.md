@@ -12,10 +12,7 @@
 4. 한번 View가 발생한 광고는 페이지가 변경되기 전까지는 다시 View Event를 발생시키지 않아야 함
 
 4가지 방식의 추적을 지원합니다.
-1. RecyclerView 안에 ViewHolder 에 광고가 존재하는 경우 (단, RecyclerView는 중첩여부 상관없음)
-2. RecyclerView 안에 ViewHolder 안에 ViewPager 형태로 광고가 존재하는 경우
-3. NestedScrollView 안에 RecyclerView 안에 ViewHolder 에 광고가 존재하는 경우
-4. NestedScrollView 안에 ViewPager 형태로 광고가 존재하는 경우
-(RecyclerView와 NestedScrollView가 구분이 된 이유는 스크롤 트래킹 방식 차이 떄문입니다.)
+1. RecyclerView(NestedScrollView) 안에 ViewHolder 에 광고가 존재하는 경우 (단, RecyclerView는 중첩여부 상관없음)
+2. RecyclerView(NestedScrollView) 안에 ViewHolder 안에 ViewPager 형태로 광고가 존재하는 경우
 
 이벤트 트래킹은 Rx로 구현되었으며 Activity or Fragment의 생명주기에 맞추기 위해 Disposable로 제공하여 Activity or Fragment의 CompsiteDisposable을 이용하도록 구현하였습니다.
