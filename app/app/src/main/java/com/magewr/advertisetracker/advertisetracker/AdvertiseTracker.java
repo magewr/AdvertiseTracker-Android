@@ -92,8 +92,7 @@ public class AdvertiseTracker {
                 .takeUntil(scrollSubject);
 
         return scrollSubject
-                .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.io())     // 백그라운드 쓰레드에서 작업
+                .subscribeOn(Schedulers.io())   // 백그라운드 쓰레드에서 작업
                 .mergeWith(startTimer)          // resume된경우 최초 1회 발행
                 .flatMap(state -> getBannerViewHolder(adListView, adViewHolderClass))
                 .doOnDispose(() -> scrollListenerList.remove(scrollListener)) // dispose시 리스너 해제
@@ -165,8 +164,7 @@ public class AdvertiseTracker {
                 .takeUntil(scrollSubject);
 
         return scrollSubject.throttleFirst(100, TimeUnit.MILLISECONDS)
-                .subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.io())     // 백그라운드 쓰레드에서 작업
+                .subscribeOn(Schedulers.io())   // 백그라운드 쓰레드에서 작업
                 .mergeWith(startTimer)          // resume된경우 최초 1회 발행
                 .flatMap(state -> getBannerViewHolder(adListView, adViewHolderClass))   // 배너가 있는 뷰홀더 가져옴
                 .flatMap(viewHolder -> getBannerViewPager((ViewGroup) viewHolder.itemView)) // 뷰홀더에서 배너 ViewPager 가져옴
@@ -243,8 +241,8 @@ public class AdvertiseTracker {
                 .takeUntil(scrollSubject)
                 .repeat();
 
-        return scrollSubject.subscribeOn(Schedulers.io())
-                .observeOn(Schedulers.io())
+        return scrollSubject
+                .subscribeOn(Schedulers.io())   // 백그라운드 쓰레드에서 작업
                 .throttleFirst(100, TimeUnit.MILLISECONDS)
                 .mergeWith(startTimer)
                 .mergeWith(scrollTimer)
@@ -357,7 +355,6 @@ public class AdvertiseTracker {
                     else
                         return -1;
                 })
-                .observeOn(Schedulers.io())
                 .filter(position -> position >= 0)
                 .doOnDispose(() -> {
                     scrollListenerList.remove(scrollListener);
