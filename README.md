@@ -16,3 +16,5 @@
 2. RecyclerView(NestedScrollView) 안에 ViewHolder 안에 ViewPager 형태로 광고가 존재하는 경우
 
 이벤트 트래킹은 Rx로 구현되었으며 Activity or Fragment의 생명주기에 맞추기 위해 Disposable로 제공하여 Activity or Fragment의 CompsiteDisposable을 이용하도록 구현하였습니다.
+
+> [클래스 바로가기](https://github.com/magewr/AdvertiseTracker-Android/blob/main/app/app/src/main/java/com/magewr/advertisetracker/advertisetracker/AdvertiseTracker.java)
