@@ -22,3 +22,8 @@
 프로젝트 파일은 더미로 클래스 코드는 아래 링크를 이용하세요.
 
 > [클래스 바로가기](https://github.com/magewr/AdvertiseTracker-Android/blob/main/app/app/src/main/java/com/magewr/advertisetracker/advertisetracker/AdvertiseTracker.java)
+
+
+##
+
+iOS : https://github.com/magewr/AdvertiseTracker-iOS
